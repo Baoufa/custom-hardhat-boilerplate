@@ -41,7 +41,6 @@ async function decryptKey() {
         },
     };
 
-
     const promptResult = await new Promise((resolve, reject) => {
         prompt.start();
         prompt.get(promptSchema, function (err, result) {

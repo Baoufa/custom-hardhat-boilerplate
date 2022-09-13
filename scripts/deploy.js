@@ -1,6 +1,7 @@
 const { ethers, run, network } = require("hardhat");
 const fs = require("fs-extra");
 const path = require("path");
+const prompt = require("prompt");
 
 function loggerReceipt(_contractReceipt) {
     console.log(``);
@@ -30,32 +31,57 @@ async function verify(contractAddress, args) {
 }
 
 async function decryptKey() {
-     try{
+    const promptSchema = {
+        properties: {
+            password: {
+                message: "Enter your password to decrypt the private key",
+                hidden: true,
+                required: true,
+            },
+        },
+    };
+
+
+    const promptResult = await new Promise((resolve, reject) => {
+        prompt.start();
+        prompt.get(promptSchema, function (err, result) {
+            resolve(result);
+            reject(err);
+        });
+    });
+
+    const PASSWORD = promptResult.password;
+
+    try {
         let wallet;
-        const keyPath = path.join(__dirname, '..', 'encryptedKeys', '.encryptedKey.json')
+        const keyPath = path.join(
+            __dirname,
+            "..",
+            "encryptedKeys",
+            ".encryptedKey.json"
+        );
         const encryptedJson = fs.readFileSync(keyPath, "utf8");
         wallet = new ethers.Wallet.fromEncryptedJsonSync(
             encryptedJson,
-            process.env.PASSWORD
+            PASSWORD
         );
         wallet = wallet.connect(ethers.provider);
         return wallet;
-
-    } catch (err){
-        throw new Error(`❌ - Error message: Set Password or Address in the Console ${err}`);
+    } catch (err) {
+        throw new Error(
+            `❌ - Error message: ${err}`
+        );
     }
 }
 
 async function main() {
-    const ContractFactory = await ethers.getContractFactory(
-        "FundMe"
-    );
+    const ContractFactory = await ethers.getContractFactory("FundMe");
 
-    let [wallet] = await ethers.getSigners()
+    let [wallet] = await ethers.getSigners();
 
-    ///////// USING ENCRYPTED KEYS ////////// 
-    // wallet = await decryptKey();
-    /////////////// END ///////////////////// 
+    ///////// USING ENCRYPTED KEYS //////////
+     wallet = await decryptKey();
+    /////////////// END /////////////////////
 
     console.log(``);
     console.log(`⌛ - Deploying, please wait...`);

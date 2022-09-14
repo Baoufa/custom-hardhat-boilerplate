@@ -1,7 +1,5 @@
 const { ethers, run, network } = require("hardhat");
-const fs = require("fs-extra");
-const path = require("path");
-const prompt = require("prompt");
+const { decryptKey } = require("../libs/decryptKey");
 
 function loggerReceipt(_contractReceipt) {
     console.log(``);
@@ -15,7 +13,7 @@ function loggerReceipt(_contractReceipt) {
     console.log(``);
 }
 
-async function verify(contractAddress, args) {
+async function verifyOnEtherScan(contractAddress, args) {
     try {
         await run("verify:verify", {
             address: contractAddress,
@@ -30,56 +28,18 @@ async function verify(contractAddress, args) {
     }
 }
 
-async function decryptKey() {
-    const promptSchema = {
-        properties: {
-            password: {
-                message: "Enter your password to decrypt the private key",
-                hidden: true,
-                required: true,
-            },
-        },
-    };
-
-    const promptResult = await new Promise((resolve, reject) => {
-        prompt.start();
-        prompt.get(promptSchema, function (err, result) {
-            resolve(result);
-            reject(err);
-        });
-    });
-
-    const PASSWORD = promptResult.password;
-
-    try {
-        let wallet;
-        const keyPath = path.join(
-            __dirname,
-            "..",
-            "encryptedKeys",
-            ".encryptedKey.json"
-        );
-        const encryptedJson = fs.readFileSync(keyPath, "utf8");
-        wallet = new ethers.Wallet.fromEncryptedJsonSync(
-            encryptedJson,
-            PASSWORD
-        );
-        wallet = wallet.connect(ethers.provider);
-        return wallet;
-    } catch (err) {
-        throw new Error(
-            `❌ - Error message: ${err}`
-        );
-    }
-}
-
 async function main() {
     const ContractFactory = await ethers.getContractFactory("FundMe");
 
-    let [wallet] = await ethers.getSigners();
+    let wallet;
+    if (network.name !== "goerli") {
+        [wallet] = await ethers.getSigners();
+    }
 
     ///////// USING ENCRYPTED KEYS //////////
-     wallet = await decryptKey();
+    if (network.name === "goerli") {
+        wallet = await decryptKey();
+    }
     /////////////// END /////////////////////
 
     console.log(``);
@@ -102,7 +62,7 @@ async function main() {
         console.log(`⌛ - Verifying on Etherscan, please wait...`);
         console.log(``);
         await contract.deployTransaction.wait(6);
-        await verify(txReceipt.contractAddress, []);
+        await verifyOnEtherScan(txReceipt.contractAddress, []);
     }
 }
 

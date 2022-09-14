@@ -6,7 +6,7 @@ describe("FundMe", function () {
     let ContractFactory, contract;
 
     beforeEach(async function () {
-        ContractFactory = await ethers.getContractFactory("SimpleStorage");
+        ContractFactory = await ethers.getContractFactory("FundMe");
         contract = await ContractFactory.deploy();
         await contract.deployed();
     });
